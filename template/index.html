@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <link rel="stylesheet" href="css/c1.css">
+    <script src="js/s1.js"></script>
+  </head>
+  <body>
+
+    <section class="form" >
+      <h1>Formulaire</h1>
+      <form action="/mesrouf/save" method="POST">
+	<span class="form_line"><label>Date</label><input id="date" name="date" type="date" min="2010-01-01" max="2016-06-30"  required /></span>
+	<span class="form_line"><label>Description</label><input name="description" maxlength="100" type="text" required /></span>
+	<span class="form_line"><label>Montant</label><input name="montant" type="number" min="5" max="1000" placeholder="MAD"  required /></span>
+	<input type="submit" value="Save">
+      </form>
+    </section>
+  </body>
+</html>
+
