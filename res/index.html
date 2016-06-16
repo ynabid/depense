@@ -2,21 +2,74 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title></title>
     <link rel="stylesheet" href="css/c1.css">
+    <link rel="stylesheet" href="http://www.w3schools.com/lib/w3.css">
     <script src="js/s1.js"></script>
   </head>
-  <body>
-
-    <section class="form" >
-      <h1>Formulaire</h1>
-      <form action="/api/depense" method="post">
+  <body >
+    <header class="w3-container w3-red">
+      <h1 >Depense</h1>
+    </header>
+    <div class="w3-container">
+      <hr/>
+      <form action="/api/depense/" id="depense"  method="POST">
 	<span class="form_line"><label>Date</label><input id="date" name="date" type="date" min="2010-01-01" max="2016-06-30"  required /></span>
-	<span class="form_line"><label>Description</label><input name="description" maxlength="100" type="text" required /></span>
-	<span class="form_line"><label>Montant</label><input name="montant" type="number" min="5" max="1000" placeholder="MAD"  required /></span>
+	<span class="form_line"><label>Description</label><input id="description" name="description" maxlength="100"  type="text" required /></span>
+	<span class="form_line"><label>Montant</label><input id="montant" name="montant" type="number" min="5" max="1000" placeholder="MAD"  required /></span>
 	<input type="submit" value="Save">
       </form>
-    </section>
+    </div>
+    <hr/>
+    <header class="w3-container w3-black">
+      <h3>Depense par Mois</h3>
+    </header>
+    <div class="w3-container">
+      <table class="w3-table">
+	<thead>
+	  <tr>
+	    <th>PPM</th><th>PM</th><th>TM</th>
+	  </tr>
+	</thead>
+	<tbody>
+	  <tr>
+		<td id="pp-month"></td><td id="p-month"></td><td id="this-month"></td>
+	  </tr>
+	</tbody>
+      </table>
+    </div>
+<!--
+    <div class="w3-container">
+      <div class ="w3-row">
+	<div class="w3-col s3 w3-center"><h6>PPM</h6></div>
+	<div class="w3-col s3 w3-center"><h6>PM </h6></div>
+	<div class="w3-col s3 w3-center"><h6>TM</h6></div>
+      </div>
+      <div class ="w3-row">
+	<div class="w3-col s3 w3-center"><p id="pp-month"></p></div>
+	<div class="w3-col s3 w3-center"><p id="p-month"></p></div>
+	<div class="w3-col s3 w3-center"><p id="this-month"></p></div>
+      </div>
+    </div>
+-->
+    <header class="w3-container w3-black">
+      <h3>List de ce mois</h3>
+    </header>
+    <div class="w3-container">
+      <table class="w3-table">
+	<thead>
+	  <tr>
+	    <th>Date</th><th>Description</th><th>Montant</th>
+	  </tr>
+	</thead>
+	<tbody id="list">
+	  <tr>
+	    <td style="display:none;" name="id"></td><td width="90px" name="date"></td><td name="description"></td><td width="60px" name="montant"></td>
+	  </tr>
+	</tbody>
+      </table>
+    </div>
   </body>
 </html>
 
