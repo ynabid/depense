@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/ynabid/depense/db"
 	"github.com/ynabid/depense/handlers"
 	"net/http"
 	"regexp"
@@ -9,20 +10,34 @@ import (
 var validPath = regexp.MustCompile("^/api/(depense|depenseList)/([a-zA-Z0-9]*)$")
 
 func main() {
+	db.OpenMysqlDB()
 	dir := "/var/www/html/depense/"
 	http.HandleFunc(
 		"/api/depenseList",
-		handlers.DepenseListHandler,
+		handlers.MakeHandler(handlers.DepenseListHandler),
 	)
 
 	http.HandleFunc(
-		"/api/depense/",
-		handlers.DepenseHandler,
+		"/api/depense",
+		handlers.MakeHandler(handlers.DepenseHandler),
 	)
 	http.HandleFunc(
 		"/api/depense/month",
-		handlers.DepenseMonthHandler,
+		handlers.MakeHandler(handlers.DepenseMonthHandler),
 	)
+	http.HandleFunc(
+		"/api/auth",
+		handlers.AuthHandler,
+	)
+	http.HandleFunc(
+		"/api/depense/category/list",
+		handlers.MakeHandler(handlers.CategoryListHandler),
+	)
+	http.HandleFunc(
+		"/api/depense/bycategory",
+		handlers.MakeHandler(handlers.DepenseCatHandler),
+	)
+
 	http.Handle(
 		"/depense/",
 		http.StripPrefix(

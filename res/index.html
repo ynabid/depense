@@ -15,9 +15,24 @@
     <div class="w3-container">
       <hr/>
       <form action="/api/depense/" id="depense"  method="POST">
-	<span class="form_line"><label>Date</label><input id="date" name="date" type="date" min="2010-01-01" max="2016-06-30"  required /></span>
-	<span class="form_line"><label>Description</label><input id="description" name="description" maxlength="100"  type="text" required /></span>
-	<span class="form_line"><label>Montant</label><input id="montant" name="montant" type="number" min="5" max="1000" placeholder="MAD"  required /></span>
+	<span class="form_line">
+	  <label>Date</label>
+	  <input id="date" name="date" type="date" min="2010-01-01" max="2016-06-30"  required />
+	</span>
+	<span class="form_line">
+	  <label>Category</label>
+	  <select id="category" required>
+	  </select>
+	</span>
+
+	<span class="form_line">
+	  <label>Description</label>
+	  <input id="description" name="description" maxlength="100"  type="text" required />
+	</span>
+	<span class="form_line">
+	  <label>Amount</label>
+	  <input id="montant" step="0.01" name="montant" type="number" min="5" max="1000" placeholder="MAD"  required />
+	</span>
 	<input type="submit" value="Save">
       </form>
     </div>
@@ -34,25 +49,31 @@
 	</thead>
 	<tbody>
 	  <tr>
-		<td id="pp-month"></td><td id="p-month"></td><td id="this-month"></td>
+	    <td id="pp-month"></td><td id="p-month"></td><td id="this-month"></td>
 	  </tr>
 	</tbody>
       </table>
     </div>
-<!--
+    <header class="w3-container w3-black">
+      <h3>Depense par Category</h3>
+    </header>
     <div class="w3-container">
-      <div class ="w3-row">
-	<div class="w3-col s3 w3-center"><h6>PPM</h6></div>
-	<div class="w3-col s3 w3-center"><h6>PM </h6></div>
-	<div class="w3-col s3 w3-center"><h6>TM</h6></div>
-      </div>
-      <div class ="w3-row">
-	<div class="w3-col s3 w3-center"><p id="pp-month"></p></div>
-	<div class="w3-col s3 w3-center"><p id="p-month"></p></div>
-	<div class="w3-col s3 w3-center"><p id="this-month"></p></div>
-      </div>
+      <table class="w3-table">
+	<thead>
+	  <tr>
+	    <th>Category</th><th>Amount</th>
+	  </tr>
+	</thead>
+	<tbody id="listCat">
+	  <tr>
+	    <td style="display:none;" name="id"></td>
+	    <td name="category"></td>
+	    <td name="montant"></td>
+	  </tr>
+	</tbody>
+      </table>
     </div>
--->
+
     <header class="w3-container w3-black">
       <h3>List de ce mois</h3>
     </header>
@@ -60,15 +81,44 @@
       <table class="w3-table">
 	<thead>
 	  <tr>
-	    <th>Date</th><th>Description</th><th>Montant</th>
+	    <th>Date</th><th>Category</th><th>Description</th><th>Montant</th>
 	  </tr>
 	</thead>
 	<tbody id="list">
 	  <tr>
-	    <td style="display:none;" name="id"></td><td width="90px" name="date"></td><td name="description"></td><td width="60px" name="montant"></td>
+	    <td style="display:none;" name="id"></td>
+	    <td name="date"></td>
+	    <td name="category"></td>
+	    <td name="description"></td>
+	    <td width="60px" name="montant"></td>
 	  </tr>
 	</tbody>
       </table>
+    </div>
+    <div id="login_bg">
+      <div id="login">
+	<header class="w3-container w3-red">
+	  <h2>Login</h2>
+	</header>
+	<form id="login_form" method="post" action="/api/auth">
+	  <table class="w3-table">
+	    <tbody id="list">
+	      <tr>
+		<td>Email</td>
+		<td><input name="email" type="email" required/></td>	  
+	      </tr>
+	      <tr>
+		<td>Password</td>
+		<td><input name="password" type="password" required/></td>	  
+	      </tr>
+	      <tr>
+		<td><input value="Connection" type="submit"/></td>	  
+	      </tr>
+	    </tbody>
+	  </table>
+
+	</form>
+      </div>
     </div>
   </body>
 </html>

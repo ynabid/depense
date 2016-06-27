@@ -9,29 +9,118 @@ import (
 	"time"
 )
 
+var db *sql.DB
+
 type Depense struct {
 	Id          int64
 	Date        int64
 	Description string
 	Montant     float64
+	UserId      int64
+	CategoryId  int64
+}
+type DepenseV struct {
+	Id          int64
+	Date        int64
+	Description string
+	Montant     float64
+	UserId      int64
+	Category    string
 }
 
-func openMysqlDB() (*sql.DB, error) {
-	return sql.Open("mysql", "root:Ya3811469@tcp(localhost:3306)/mm")
+type DepenseCategory struct {
+	Category Category
+	Montant  float64
+}
+
+func OpenMysqlDB() (*sql.DB, error) {
+	var err error
+	if db != nil {
+		return db, nil
+	}
+	db, err = sql.Open("mysql", "root:Ya3811469@tcp(localhost:3306)/mm")
+	return db, err
 }
 
 func (d *Depense) Insert() (sql.Result, error) {
-	db, err := openMysqlDB()
-	if err != nil {
-		return nil, err
-	}
 	return db.Exec(
-		"INSERT INTO depense (date,description,montant) VALUES (?,?,?)",
+		"INSERT INTO depense (date,description,montant,user_id,category_id) VALUES (?,?,?,?,?)",
 		d.Date,
 		d.Description,
 		d.Montant,
+		d.UserId,
+		d.CategoryId,
 	)
 }
+
+func DepenseByCategory(from, to int64) ([]DepenseCategory, error) {
+	l := list.New()
+	rows, err := db.Query(
+		"SELECT category.id,category.name,sum(depense.montant) FROM depense LEFT JOIN category ON depense.category_id = category.id WHERE date >= ? and date <= ? GROUP BY category_id ORDER BY name",
+		from,
+		to,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var d DepenseCategory
+		rows.Scan(&d.Category.Id, &d.Category.Name, &d.Montant)
+		l.PushBack(d)
+	}
+	depenseList := make([]DepenseCategory, l.Len())
+	i := 0
+	for e := l.Front(); e != nil; e = e.Next() {
+		depenseList[i] = e.Value.(DepenseCategory)
+		i++
+	}
+	rows.Close()
+	return depenseList, nil
+}
+
+func DepenseList(from, to int64) ([]DepenseV, error) {
+	var depenseList []DepenseV
+	l := list.New()
+	rows, err := db.Query(
+		"SELECT depense.id,date,montant,description,user_id,name FROM depense LEFT JOIN category ON depense.category_id = category.id WHERE date >= ? and date <= ? ORDER BY date DESC, id DESC",
+		from,
+		to,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var d DepenseV
+		rows.Scan(&d.Id, &d.Date, &d.Montant, &d.Description, &d.UserId, &d.Category)
+		l.PushBack(d)
+	}
+	depenseList = make([]DepenseV, l.Len())
+	i := 0
+	for e := l.Front(); e != nil; e = e.Next() {
+		depenseList[i] = e.Value.(DepenseV)
+		i++
+	}
+	rows.Close()
+	return depenseList, nil
+}
+
+func Read(id int64) (*Depense, error) {
+	rows, err := db.Query(
+		"SELECT date,montant,description,user_id,category_id from depense WHERE id=?",
+		id,
+	)
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	rows.Next()
+	var d Depense
+	rows.Scan(&d.Date, &d.Montant, &d.Description, &d.UserId, &d.CategoryId)
+	return &d, nil
+}
+
 func ParseMonth(date string) (from, to int64, err error) {
 	if date != "" && len(date) == 7 {
 		t, err := time.Parse("2006-01-02", date+"-01")
@@ -73,7 +162,6 @@ func DepenseMonth(m string) (float64, error) {
 	if err != nil {
 		return 0.0, err
 	}
-	db, err := openMysqlDB()
 	rows, err := db.Query(
 		"SELECT sum(montant) FROM depense WHERE date >= ? and date <= ?",
 		from,
@@ -84,55 +172,6 @@ func DepenseMonth(m string) (float64, error) {
 	}
 	rows.Next()
 	rows.Scan(&f)
+	rows.Close()
 	return f, nil
-}
-
-func DepenseList(from, to int64) ([]Depense, error) {
-	var depenseList []Depense
-	l := list.New()
-	db, err := openMysqlDB()
-	if err != nil {
-		return nil, err
-	}
-	rows, err := db.Query(
-		"SELECT id,date,montant,description from depense WHERE date >= ? and date <= ? ORDER BY date DESC, id DESC",
-		from,
-		to,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	for rows.Next() {
-		var d Depense
-		rows.Scan(&d.Id, &d.Date, &d.Montant, &d.Description)
-		l.PushBack(d)
-	}
-	depenseList = make([]Depense, l.Len())
-	i := 0
-	for e := l.Front(); e != nil; e = e.Next() {
-		depenseList[i] = e.Value.(Depense)
-		i++
-	}
-	defer rows.Close()
-	return depenseList, nil
-}
-
-func Read(id int64) (*Depense, error) {
-	db, err := openMysqlDB()
-	if err != nil {
-		return nil, err
-	}
-	rows, err := db.Query(
-		"SELECT date,montant,description from depense WHERE id=?",
-		id,
-	)
-	defer rows.Close()
-	if err != nil {
-		return nil, err
-	}
-	rows.Next()
-	var d Depense
-	rows.Scan(&d.Date, &d.Montant, &d.Description)
-	return &d, nil
 }
