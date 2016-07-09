@@ -1,3 +1,5 @@
+var accounts;
+var categories;
 window.onload = function(){
   var today=new Date();
   var day=today.getDate();
@@ -17,41 +19,57 @@ window.onload = function(){
     return false;	
   } 
   document.getElementById("depense").onsubmit = function(){
+    /*    var type = 0;
+	  var radioType = document.getElementsByName("type");
 
-    var xhr;
-    if (window.XMLHttpRequest) {
-      xhr = new XMLHttpRequest();
-    } else {
-      // code for IE6, IE5
-      xhr = new ActiveXObject("Microsoft.XMLHTTP");
-    }
-    xhr.open("POST","/api/depense",true);
-    xhr.setRequestHeader("Content-Type", "application/json");
-    xhr.onreadystatechange = function(){
-      if (xhr.readyState == 4){
-	switch(xhr.status){
-	  case 201 :
-	    loadAllMonth()
-	      document.getElementById("description").value="";
-	    document.getElementById("montant").value="";
-
-	    break;
-	  default :
-	    console.log(xhr.response);
+	  for (var i = 0, length = radioType.length; i < length; i++) {
+	  if (radioType[i].checked) {
+	  type=radioType[i].value;
+	  break;
+	  }
+	  }
+	  */
+    addEntry(
+	{
+	  date : document.getElementById("date").value,
+	  description : document.getElementById("description").value,
+	  //type : Number(type),
+	  montant : Number(document.getElementById("montant").value),
+	  categoryid : Number(document.getElementById("category").value),
+	  accountid : Number(document.getElementById("account").value)
+	},function(){
+	  loadAllMonth();
+	  document.getElementById("description").value="";
+	  document.getElementById("montant").value="";
 	}
-      }
-    }
-    var data = JSON.stringify({
-      date : document.getElementById("date").value,
-      description : document.getElementById("description").value,
-      montant : document.getElementById("montant").value,
-      categoryid : document.getElementById("category").value
-
-    });
-
-    xhr.send(data);
+	);
     return false;	
   } 
+}
+
+function addEntry(d,callback){
+  var xhr=getXHR();
+  xhr.open("POST","/api/depense",true);
+  xhr.setRequestHeader("Content-Type", "application/json");
+  xhr.onreadystatechange = function(){
+    if (xhr.readyState == 4){
+      switch(xhr.status){
+	case 201 :
+	  callback();
+	  break;
+	default :
+	  console.log(xhr.response);
+      }
+    }
+  }
+  /*if(d.type==0){//DEBIT
+    d.montant = -1*d.montant;
+    }else{
+    d.montant = 1*d.montant;
+    }
+    */
+  var data = JSON.stringify(d);
+  xhr.send(data);
 }
 function getCurrentMonth(){
   var today=new Date();
@@ -72,6 +90,7 @@ function getXHR(){
   return xhr;
 }
 function loadAll(){
+  loadAccounts();
   loadCategories();
   loadAllMonth(); 
   loadDepenseByCategory();
@@ -85,17 +104,79 @@ function loadDepenseByCategory(){
       switch(this.status){
 	case 200 :
 	  var dCatList = JSON.parse(xhr.responseText);
+
+	  var p=document.getElementById("listCatHead");
+	  var le= p.firstElementChild.cloneNode(true);
+	  var p2=document.getElementById("catTotal");
+	  var le2= p2.firstElementChild.cloneNode(true);
+
+	  for(i in accounts){
+	    var account = accounts[i];
+	    var lei= le.cloneNode(true);
+	    lei.innerHTML = account.Name;
+	    p.appendChild(lei);
+	    p.appendChild(lei);
+
+	    var lei2= le2.cloneNode(true);
+	    if(dCatList["Total"][account.Name]){
+	      lei2.innerHTML = dCatList["Total"][account.Name];
+	    }else{
+	      lei2.innerHTML = 0; 
+	    }
+	    p2.appendChild(lei2);
+
+	  }
+
 	  var p=document.getElementById("listCat");
 	  var le= p.firstElementChild.cloneNode(true);
 	  while (p.firstChild) {
 	    p.removeChild(p.firstChild);
 	  }
-	  for(d in dCatList){
+	  for(i in categories){
+	    var category = categories[i];
 	    var lei= le.cloneNode(true);
-	    lei.querySelector("[name=id]").innerHTML = dCatList[d].Category.Id;
-	    lei.querySelector("[name=category]").innerHTML = dCatList[d].Category.Name;
-	    lei.querySelector("[name=montant]").innerHTML = dCatList[d].Montant;
+	    var cell = lei.firstElementChild;
+	    cell.innerHTML = category.Name;
+	    lei.appendChild(cell);
+	    for(j in accounts){
+	      var cell2 = cell.cloneNode(true);
+	      var account = accounts[j];
+	      if(dCatList[category.Name] && dCatList[category.Name][account.Name]){
+		cell2.innerHTML = dCatList[category.Name][account.Name];
+	      }else{
+		cell2.innerHTML = 0;
+	      }
+	      lei.appendChild(cell2);
+	    }
 	    p.appendChild(lei)
+	  }
+	  break;
+	default :
+	  console.log(this.response);
+      }
+    }
+  }
+  xhr.send();
+}
+function loadAccounts(){
+  var xhr=getXHR();
+  xhr.open("GET","/api/depense/account/list",true);
+  xhr.setRequestHeader("Content-Type", "application/json");
+  xhr.onreadystatechange = function(){
+    if (this.readyState == 4){
+      switch(this.status){
+	case 200 :
+	  accounts = JSON.parse(xhr.responseText);
+	  var accountLV = document.getElementById("account");
+	  for (var i = 0, len = accounts.length; i < len; i++) {
+	    var account = accounts[i];
+	    var option = document.createElement("option");
+	    option.value = account.Id;
+	    if (account.Id == 1){
+	      option.selected = true;
+	    }
+	    option.textContent = account.Name;
+	    accountLV.add(option);
 	  }
 	  break;
 	default :
@@ -107,21 +188,14 @@ function loadDepenseByCategory(){
 }
 
 function loadCategories(){
-  var xhr;
-  if (window.XMLHttpRequest) {
-    xhr = new XMLHttpRequest();
-  } else {
-    // code for IE6, IE5
-    xhr = new ActiveXObject("Microsoft.XMLHTTP");
-  }
-
+  var xhr=getXHR();
   xhr.open("GET","/api/depense/category/list",true);
   xhr.setRequestHeader("Content-Type", "application/json");
   xhr.onreadystatechange = function(){
     if (this.readyState == 4){
       switch(this.status){
 	case 200 :
-	  var categories = JSON.parse(xhr.responseText);
+	  categories = JSON.parse(xhr.responseText);
 	  var categoryLV = document.getElementById("category");
 	  for (var i = 0, len = categories.length; i < len; i++) {
 	    var category = categories[i];
@@ -188,14 +262,8 @@ function loadPPMonth(){
 }
 
 function loadData(year,month,callback){
+  var xhr=getXHR();
   if(month<10) month ="0"+month;
-  var xhr;
-  if (window.XMLHttpRequest) {
-    xhr = new XMLHttpRequest();
-  } else {
-    // code for IE6, IE5
-    xhr = new ActiveXObject("Microsoft.XMLHTTP");
-  }
   xhr.open("GET","/api/depense/month"+"?month="+year+"-"+month,true);
   xhr.onreadystatechange = function(){
     if (xhr.readyState == 4){
@@ -243,14 +311,8 @@ function loadDepenseListTM(){
   );
 }
 function loadDepenseList(year,month,callback){
+  var xhr=getXHR();
   if(month<10) month ="0"+month;
-  var xhr;
-  if (window.XMLHttpRequest) {
-    xhr = new XMLHttpRequest();
-  } else {
-    // code for IE6, IE5
-    xhr = new ActiveXObject("Microsoft.XMLHTTP");
-  }
   xhr.open("GET","/api/depenseList"+"?month="+year+"-"+month,true);
   xhr.onreadystatechange = function(){
     if (xhr.readyState == 4){
@@ -290,8 +352,8 @@ function checkCookie(name) {
 }
 function isAuth(){
   if(!checkCookie("uid")){	
-    document.getElementById("login_bg").style.display = "block"
-      var loginPopup = document.getElementById("login");
+    document.getElementById("login_bg").style.display = "block";
+    var loginPopup = document.getElementById("login");
     loginPopup.style.left = (window.screen.width - loginPopup.offsetWidth)/2 + "px";
     loginPopup.style.top = (window.screen.height - loginPopup.offsetHeight)/2 + "px";
     return false;
@@ -299,13 +361,7 @@ function isAuth(){
   return true;
 }
 function login(email,password,callback){
-  var xhr;
-  if (window.XMLHttpRequest) {
-    xhr = new XMLHttpRequest();
-  } else {
-    // code for IE6, IE5
-    xhr = new ActiveXObject("Microsoft.XMLHTTP");
-  }
+  var xhr=getXHR();
   xhr.open("POST","/api/auth",true);
   xhr.onreadystatechange = function(){
     if (xhr.readyState == 4){

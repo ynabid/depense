@@ -16,8 +16,10 @@ type Depense struct {
 	Date        int64
 	Description string
 	Montant     float64
-	UserId      int64
-	CategoryId  int64
+	//Type        int
+	UserId     int64
+	CategoryId int64
+	AccountId  int64
 }
 type DepenseV struct {
 	Id          int64
@@ -28,10 +30,8 @@ type DepenseV struct {
 	Category    string
 }
 
-type DepenseCategory struct {
-	Category Category
-	Montant  float64
-}
+type DepenseAccount map[string]float64
+type DepenseCategory map[string]DepenseAccount
 
 func OpenMysqlDB() (*sql.DB, error) {
 	var err error
@@ -44,19 +44,29 @@ func OpenMysqlDB() (*sql.DB, error) {
 
 func (d *Depense) Insert() (sql.Result, error) {
 	return db.Exec(
-		"INSERT INTO depense (date,description,montant,user_id,category_id) VALUES (?,?,?,?,?)",
+		"INSERT INTO depense (date,description,montant,user_id,category_id,account_id) VALUES (?,?,?,?,?,?)",
 		d.Date,
 		d.Description,
 		d.Montant,
+		//d.Type,
 		d.UserId,
 		d.CategoryId,
+		d.AccountId,
 	)
 }
 
-func DepenseByCategory(from, to int64) ([]DepenseCategory, error) {
-	l := list.New()
+func DepenseByCategory(from, to int64) (DepenseCategory, error) {
+	var d DepenseCategory = make(map[string]DepenseAccount)
 	rows, err := db.Query(
-		"SELECT category.id,category.name,sum(depense.montant) FROM depense LEFT JOIN category ON depense.category_id = category.id WHERE date >= ? and date <= ? GROUP BY category_id ORDER BY name",
+		`SELECT 
+			category.name,
+			account.name,
+			sum(depense.montant) 
+		 FROM depense 	JOIN category ON depense.category_id = category.id 
+				JOIN account ON depense.account_id = account.id
+	 	WHERE date >= ? and date <= ? 
+		GROUP BY account_id, category_id 
+		ORDER BY account.name, category.name`,
 		from,
 		to,
 	)
@@ -65,18 +75,20 @@ func DepenseByCategory(from, to int64) ([]DepenseCategory, error) {
 	}
 
 	for rows.Next() {
-		var d DepenseCategory
-		rows.Scan(&d.Category.Id, &d.Category.Name, &d.Montant)
-		l.PushBack(d)
-	}
-	depenseList := make([]DepenseCategory, l.Len())
-	i := 0
-	for e := l.Front(); e != nil; e = e.Next() {
-		depenseList[i] = e.Value.(DepenseCategory)
-		i++
+		var cat, acc string
+		var amount float64
+		rows.Scan(&cat, &acc, &amount)
+		if d["Total"] == nil {
+			d["Total"] = make(map[string]float64)
+		}
+		if d[cat] == nil {
+			d[cat] = make(map[string]float64)
+		}
+		d[cat][acc] = amount
+		d["Total"][acc] = d["Total"][acc] + amount
 	}
 	rows.Close()
-	return depenseList, nil
+	return d, nil
 }
 
 func DepenseList(from, to int64) ([]DepenseV, error) {

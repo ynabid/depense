@@ -6,7 +6,9 @@ import (
 	"github.com/ynabid/depense/db"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"net/http/httputil"
 	"regexp"
 	"strconv"
 	"time"
@@ -15,8 +17,10 @@ import (
 type DepenseString struct {
 	Date        string
 	Description string
-	Montant     string
-	CategoryId  string
+	//Type        int
+	Montant    float64
+	CategoryId int64
+	AccountId  int64
 }
 
 var validPath = regexp.MustCompile("^/api/(depense|depenseList)/([a-zA-Z0-9]*)$")
@@ -40,9 +44,8 @@ func DepenseMonthHandler(w http.ResponseWriter, r *http.Request, session *db.Ses
 	}
 }
 func DepenseHandler(w http.ResponseWriter, r *http.Request, session *db.Session) {
-	/*	data, _ := httputil.DumpRequest(r, true)
-		log.Println(string(data))
-	*/
+	data, _ := httputil.DumpRequest(r, true)
+	log.Println(string(data))
 	if r.Method == "POST" {
 		if r.Header.Get("Content-Type") == "application/json" {
 			depense, err := parseDepense(r.Body)
@@ -97,6 +100,23 @@ func DepenseHandler(w http.ResponseWriter, r *http.Request, session *db.Session)
 		w.Write(b)
 	}
 }
+func AccountListHandler(w http.ResponseWriter, r *http.Request, session *db.Session) {
+	if r.Method == "GET" {
+		accountList, err := db.ReadAccounts()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		} else {
+			b, err := json.Marshal(accountList)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write(b)
+		}
+	}
+}
+
 func CategoryListHandler(w http.ResponseWriter, r *http.Request, session *db.Session) {
 	if r.Method == "GET" {
 		categoryList, err := db.ReadAll()
@@ -258,16 +278,9 @@ func parseDepense(body io.ReadCloser) (*db.Depense, error) {
 	}
 
 	depense.Description = dStr.Description
-	depense.Montant, err = strconv.ParseFloat(dStr.Montant, 64)
-	if err != nil {
-		return nil, err
-	}
-	if depense.Montant <= 0 {
-		return nil, errors.New("Montant doit être >= 0")
-	}
-	depense.CategoryId, err = strconv.ParseInt(dStr.CategoryId, 10, 64)
-	if err != nil {
-		return nil, err
-	}
+	depense.Montant = dStr.Montant
+	//	depense.Type = dStr.Type
+	depense.AccountId = dStr.AccountId
+	depense.CategoryId = dStr.CategoryId
 	return &depense, nil
 }

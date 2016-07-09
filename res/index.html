@@ -14,26 +14,54 @@
     </header>
     <div class="w3-container">
       <hr/>
-      <form action="/api/depense/" id="depense"  method="POST">
-	<span class="form_line">
-	  <label>Date</label>
-	  <input id="date" name="date" type="date" min="2010-01-01" max="2016-06-30"  required />
-	</span>
-	<span class="form_line">
-	  <label>Category</label>
-	  <select id="category" required>
-	  </select>
-	</span>
+      <form action="/api/depense" id="depense"  method="POST">
+	<table class="w3-table">
+	<tbody>
+	  <tr>
+	    <td>
+	      <label>Date</label>
+	    </td>
+	    <td>
+		<input id="date" name="date" type="date" require />
+	    </td>
+	  </tr>
+	  <tr>
+	    <td>
+	      <label>Account</label>
+	    </td>
+	    <td>
+	      <select id="account" required></select>
+	    </td>
+	  </tr>
 
-	<span class="form_line">
-	  <label>Description</label>
-	  <input id="description" name="description" maxlength="100"  type="text" required />
-	</span>
-	<span class="form_line">
-	  <label>Amount</label>
-	  <input id="montant" step="0.01" name="montant" type="number" min="5" max="1000" placeholder="MAD"  required />
-	</span>
-	<input type="submit" value="Save">
+	  <tr>
+	    <td>
+	      <label>Category</label>
+	    </td>
+	    <td>
+	      <select id="category" required></select>
+	    </td>
+	  </tr>
+	  <tr>
+	    <td>
+	      <label>Description</label>
+	    </td>
+	    <td>
+	      <input id="description" name="description" maxlength="100"  type="text" required />
+	    </td>
+	  </tr>
+	  <tr>
+	    <td>
+	      <label>Amount</label>
+	    </td>
+	    <td>
+	      <input id="montant" step="0.01" name="montant" type="number" min="5"  placeholder="MAD"  required />
+	    </td>
+	  </tr>
+
+	</tbody>
+      </table>
+      <input type="submit" value="Save">
       </form>
     </div>
     <hr/>
@@ -59,16 +87,17 @@
     </header>
     <div class="w3-container">
       <table class="w3-table">
-	<thead>
-	  <tr>
-	    <th>Category</th><th>Amount</th>
+	<thead >
+	  <tr id="listCatHead">
+	    <th >Category/Account</th>
+	  </tr>
+	  <tr id="catTotal">
+	    <th >Total</th>
 	  </tr>
 	</thead>
 	<tbody id="listCat">
 	  <tr>
-	    <td style="display:none;" name="id"></td>
-	    <td name="category"></td>
-	    <td name="montant"></td>
+	    <td></td>
 	  </tr>
 	</tbody>
       </table>

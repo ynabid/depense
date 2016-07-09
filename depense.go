@@ -29,6 +29,11 @@ func main() {
 		"/api/auth",
 		handlers.AuthHandler,
 	)
+
+	http.HandleFunc(
+		"/api/depense/account/list",
+		handlers.MakeHandler(handlers.AccountListHandler),
+	)
 	http.HandleFunc(
 		"/api/depense/category/list",
 		handlers.MakeHandler(handlers.CategoryListHandler),
