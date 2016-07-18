@@ -1,5 +1,4 @@
-var accounts;
-var categories;
+var depenses;
 window.onload = function(){
   var today=new Date();
   var day=today.getDate();
@@ -7,6 +6,7 @@ window.onload = function(){
   var year=today.getFullYear();
   if(month<10) month ="0"+month;
   if(day<10) day="0"+day;
+
   loadAll();
   document.getElementById("date").value = year+"-"+month+"-"+day;
   document.getElementById("login_form").onsubmit = function(){
@@ -19,16 +19,6 @@ window.onload = function(){
     return false;	
   } 
   document.getElementById("depense").onsubmit = function(){
-    /*    var type = 0;
-	  var radioType = document.getElementsByName("type");
-
-	  for (var i = 0, length = radioType.length; i < length; i++) {
-	  if (radioType[i].checked) {
-	  type=radioType[i].value;
-	  break;
-	  }
-	  }
-	  */
     addEntry(
 	{
 	  date : document.getElementById("date").value,
@@ -38,7 +28,7 @@ window.onload = function(){
 	  categoryid : Number(document.getElementById("category").value),
 	  accountid : Number(document.getElementById("account").value)
 	},function(){
-	  loadAllMonth();
+	  loadAll();
 	  document.getElementById("description").value="";
 	  document.getElementById("montant").value="";
 	}
@@ -62,12 +52,6 @@ function addEntry(d,callback){
       }
     }
   }
-  /*if(d.type==0){//DEBIT
-    d.montant = -1*d.montant;
-    }else{
-    d.montant = 1*d.montant;
-    }
-    */
   var data = JSON.stringify(d);
   xhr.send(data);
 }
@@ -90,177 +74,205 @@ function getXHR(){
   return xhr;
 }
 function loadAll(){
-  loadAccounts();
-  loadCategories();
-  loadAllMonth(); 
-  loadDepenseByCategory();
-}
-function loadDepenseByCategory(){
   var xhr=getXHR();
   var currentMonth = getCurrentMonth();
-  xhr.open("GET","/api/depense/bycategory?month="+currentMonth,true);
+  xhr.open("GET","/api/depense/all?month="+currentMonth,true);
   xhr.onreadystatechange = function(){
     if (this.readyState == 4){
       switch(this.status){
 	case 200 :
-	  var dCatList = JSON.parse(xhr.responseText);
+	  depenses = JSON.parse(xhr.responseText);
+	  bindAccountsTR();
+	  bindDepenseByCategory();
+	  bindDepenseList();
+	  bindAccounts();
+	  bindCategories();
 
-	  var p=document.getElementById("listCatHead");
-	  var le= p.firstElementChild.cloneNode(true);
-	  var p2=document.getElementById("catTotal");
-	  var le2= p2.firstElementChild.cloneNode(true);
-
-	  for(i in accounts){
-	    var account = accounts[i];
-	    var lei= le.cloneNode(true);
-	    lei.innerHTML = account.Name;
-	    p.appendChild(lei);
-	    p.appendChild(lei);
-
-	    var lei2= le2.cloneNode(true);
-	    if(dCatList["Total"][account.Name]){
-	      lei2.innerHTML = dCatList["Total"][account.Name];
-	    }else{
-	      lei2.innerHTML = 0; 
-	    }
-	    p2.appendChild(lei2);
-
-	  }
-
-	  var p=document.getElementById("listCat");
-	  var le= p.firstElementChild.cloneNode(true);
-	  while (p.firstChild) {
-	    p.removeChild(p.firstChild);
-	  }
-	  for(i in categories){
-	    var category = categories[i];
-	    var lei= le.cloneNode(true);
-	    var cell = lei.firstElementChild;
-	    cell.innerHTML = category.Name;
-	    lei.appendChild(cell);
-	    for(j in accounts){
-	      var cell2 = cell.cloneNode(true);
-	      var account = accounts[j];
-	      if(dCatList[category.Name] && dCatList[category.Name][account.Name]){
-		cell2.innerHTML = dCatList[category.Name][account.Name];
-	      }else{
-		cell2.innerHTML = 0;
-	      }
-	      lei.appendChild(cell2);
-	    }
-	    p.appendChild(lei)
-	  }
-	  break;
-	default :
-	  console.log(this.response);
       }
     }
   }
   xhr.send();
 }
-function loadAccounts(){
-  var xhr=getXHR();
-  xhr.open("GET","/api/depense/account/list",true);
-  xhr.setRequestHeader("Content-Type", "application/json");
-  xhr.onreadystatechange = function(){
-    if (this.readyState == 4){
-      switch(this.status){
-	case 200 :
-	  accounts = JSON.parse(xhr.responseText);
-	  var accountLV = document.getElementById("account");
-	  for (var i = 0, len = accounts.length; i < len; i++) {
-	    var account = accounts[i];
-	    var option = document.createElement("option");
-	    option.value = account.Id;
-	    if (account.Id == 1){
-	      option.selected = true;
-	    }
-	    option.textContent = account.Name;
-	    accountLV.add(option);
-	  }
-	  break;
-	default :
-	  console.log(this.response);
-      }
-    }
+function bindAccountsTR(){
+  var row=document.getElementById("listAccountHead");
+  var col= row.firstElementChild.cloneNode(true);
+
+  var p2=document.getElementById("listAccount");
+  var row2= p2.firstElementChild.cloneNode(true);
+  var col2= row2.firstElementChild.cloneNode(true);
+
+
+
+  while (row.firstChild) {
+    row.removeChild(row.firstChild);
   }
-  xhr.send();
+
+  while (p2.firstChild) {
+    p2.removeChild(p2.firstChild);
+  }
+  while (row2.firstChild) {
+    row2.removeChild(row2.firstChild);
+  }
+
+
+  var accountsTR = depenses.AccountsTR;
+  var accounts = depenses.Accounts;
+  accounts.push({Id : -1, Name :""});
+  var ch = col.cloneNode(true);
+  ch.innerHTML = "";
+  row.appendChild(ch);
+
+  for(i in accounts){
+    var ch = col.cloneNode(true);
+    ch.innerHTML = accounts[i].Name;
+    row.appendChild(ch);
+  }
+
+  for(i in accounts){
+    var r = row2.cloneNode(true);
+    var c = col2.cloneNode(true);
+    c.innerHTML = accounts[i].Name;
+    r.appendChild(c);
+    for(j in accounts){
+      c = col2.cloneNode(true);
+      if(accountsTR[accounts[i].Name] && accountsTR[accounts[i].Name][accounts[j].Name]){
+	c.innerHTML =  accountsTR[accounts[i].Name][accounts[j].Name]; 
+      }else{
+	c.innerHTML = 0;
+      }
+      r.appendChild(c);
+    }
+    p2.appendChild(r);
+  }
 }
 
-function loadCategories(){
-  var xhr=getXHR();
-  xhr.open("GET","/api/depense/category/list",true);
-  xhr.setRequestHeader("Content-Type", "application/json");
-  xhr.onreadystatechange = function(){
-    if (this.readyState == 4){
-      switch(this.status){
-	case 200 :
-	  categories = JSON.parse(xhr.responseText);
-	  var categoryLV = document.getElementById("category");
-	  for (var i = 0, len = categories.length; i < len; i++) {
-	    var category = categories[i];
-	    var option = document.createElement("option");
-	    option.value = category.Id;
-	    if (category.Id == 1){
-	      option.selected = true;
-	    }
-	    option.textContent = category.Name;
-	    categoryLV.add(option);
-	  }
-	  break;
-	default :
-	  console.log(this.response);
-      }
-    }
+function bindDepenseByCategory(){
+  var p=document.getElementById("listCatHead");
+  var le= p.firstElementChild.cloneNode(true);
+  var p2=document.getElementById("catTotal");
+  var le2= p2.firstElementChild.cloneNode(true);
+  var accounts = depenses.Accounts;
+  var categories = depenses.Categories;
+  var dCatList = depenses.DepenseCategory;
+
+  while (p.firstChild) {
+    p.removeChild(p.firstChild);
   }
-  xhr.send();
-}
-function loadAllMonth(){
-  if(isAuth()){
-    loadPPMonth();
-    loadThisMonth();
-    loadPMonth();
-    loadDepenseListTM();
+  p.appendChild(le);
+
+  while (p2.firstChild) {
+    p2.removeChild(p2.firstChild);
   }
-}
-function loadThisMonth(){
-  var today=new Date();
-  var month=today.getMonth()+1;
-  var year=today.getFullYear();
-  loadData(year,month,function(res){
-    document.getElementById("this-month").innerHTML = res;
-  })
-}
-function loadPMonth(){
-  var today=new Date();
-  var month=today.getMonth()+1;
-  var year=today.getFullYear();
-  if(month == 1){
-    year--;
-    month = 12;
+  p2.appendChild(le2);
+
+
+  var lei= le.cloneNode(true);
+  lei.innerHTML = "Total";
+  p.appendChild(lei);
+
+  var lei2= le2.cloneNode(true);
+  if(dCatList["Total"]["Total"]){
+    lei2.innerHTML = dCatList["Total"]["Total"];
   }else{
-    month--	
+    lei2.innerHTML = 0; 
   }
-  loadData(year,month,function(res){
-    document.getElementById("p-month").innerHTML = res;
-  })
+  p2.appendChild(lei2);
+
+
+  for(i in accounts){
+    var account = accounts[i];
+    var lei= le.cloneNode(true);
+    lei.innerHTML = account.Name;
+    p.appendChild(lei);
+
+    var lei2= le2.cloneNode(true);
+    if(dCatList["Total"][account.Name]){
+      lei2.innerHTML = dCatList["Total"][account.Name];
+    }else{
+      lei2.innerHTML = 0; 
+    }
+    p2.appendChild(lei2);
+
+  }
+
+  var p=document.getElementById("listCat");
+  var le= p.firstElementChild.cloneNode(true);
+  var lei = le.firstElementChild;
+  while (p.firstChild) {
+    p.removeChild(p.firstChild);
+  }
+  while (le.firstChild) {
+    le.removeChild(le.firstChild);
+  }
+  le.appendChild(lei);
+
+  for(i in categories){
+    var category = categories[i];
+    var lei= le.cloneNode(true);
+    var cell = lei.firstElementChild;
+    cell.innerHTML = category.Name;
+    lei.appendChild(cell);
+
+    var cell2 = cell.cloneNode(true);
+    if(dCatList[category.Name] && dCatList[category.Name]["Total"]){
+      cell2.innerHTML = dCatList[category.Name]["Total"];
+    }else{
+      cell2.innerHTML = 0;
+    }
+    lei.appendChild(cell2);
+
+
+    for(j in accounts){
+      var cell2 = cell.cloneNode(true);
+      var account = accounts[j];
+      if(dCatList[category.Name] && dCatList[category.Name][account.Name]){
+	cell2.innerHTML = dCatList[category.Name][account.Name];
+      }else{
+	cell2.innerHTML = 0;
+      }
+      lei.appendChild(cell2);
+    }
+    p.appendChild(lei)
+  }
+}
+function bindAccounts(){
+  accounts = depenses.Accounts;
+  var accountLV = document.getElementById("account");
+  while (accountLV.firstChild) {
+    accountLV.removeChild(accountLV.firstChild);
+  }
+
+  for (var i = 0, len = accounts.length; i < len; i++) {
+    var account = accounts[i];
+    var option = document.createElement("option");
+    option.value = account.Id;
+    if (account.Id == 1){
+      option.selected = true;
+    }
+    option.textContent = account.Name;
+    accountLV.add(option);
+  }
 }
 
-function loadPPMonth(){
-  var today=new Date();
-  var month=today.getMonth()+1;
-  var year=today.getFullYear();
-  if(month <= 2){
-    year--;
-    month = 13 - month;
-  }else{
-    month= month -2;	
-  }
-  loadData(year,month,function(res){
-    document.getElementById("pp-month").innerHTML = res;
-  })
-}
+function bindCategories(){
+  categories = depenses.Categories;
+  var categoryLV = document.getElementById("category");
+  while (categoryLV.firstChild) {
+    categoryLV.removeChild(categoryLV.firstChild);
 
+  }
+
+  for (var i = 0, len = categories.length; i < len; i++) {
+    var category = categories[i];
+    var option = document.createElement("option");
+    option.value = category.Id;
+    if (category.Id == 1){
+      option.selected = true;
+    }
+    option.textContent = category.Name;
+    categoryLV.add(option);
+  }
+}
 function loadData(year,month,callback){
   var xhr=getXHR();
   if(month<10) month ="0"+month;
@@ -278,54 +290,69 @@ function loadData(year,month,callback){
   }
   xhr.send();
 }
-function loadDepenseListTM(){
-  var today=new Date();
-  var month=today.getMonth()+1;
-  var year=today.getFullYear();
-  loadDepenseList(
-      year,
-      month,
-      function(dList){
-	var p=document.getElementById("list");
-	var le= p.firstElementChild.cloneNode(true);
-	while (p.firstChild) {
-	  p.removeChild(p.firstChild);
-	}
-	for(d in dList){
-	  var lei= le.cloneNode(true);
-	  lei.querySelector("[name=id]").innerHTML = dList[d].Id;
-	  lei.querySelector("[name=category]").innerHTML = dList[d].Category;
-	  lei.querySelector("[name=description]").innerHTML = dList[d].Description;
-	  lei.querySelector("[name=montant]").innerHTML = dList[d].Montant;
-	  var date = new Date(dList[d].Date*1000);
-	  var day = date.getDate();
-	  var m = ""
-	    if(day < 10) 
-	      m="0"+day;
-	    else
-	      m= day;
-	  lei.querySelector("[name=date]").innerHTML = m; 
-	  p.appendChild(lei)
-	}
-      }
-  );
-}
-function loadDepenseList(year,month,callback){
-  var xhr=getXHR();
+function convertEpoch(t){
+  var date = new Date(t*1000);
+  var day = date.getDate();
+  var month=date.getMonth()+1;
+  var year=date.getFullYear();
   if(month<10) month ="0"+month;
-  xhr.open("GET","/api/depenseList"+"?month="+year+"-"+month,true);
-  xhr.onreadystatechange = function(){
-    if (xhr.readyState == 4){
-      switch(xhr.status){
-	case 200 :
-	  callback(JSON.parse(xhr.responseText));
-	  break;
-	default :
-	  console.log(xhr.response);
+  if(day < 10) 
+    day="0"+day;
+  return year+"-"+month+"-"+day;
+}
+
+function bindDepenseList(){
+  var row=document.getElementById("listDepenseHead");
+  var col= row.firstElementChild.cloneNode(true);
+
+  var p2=document.getElementById("list");
+  var row2= p2.firstElementChild.cloneNode(true);
+  var col2= row2.firstElementChild.cloneNode(true);
+
+
+
+  while (row.firstChild) {
+    row.removeChild(row.firstChild);
+  }
+
+  while (p2.firstChild) {
+    p2.removeChild(p2.firstChild);
+  }
+  while (row2.firstChild) {
+    row2.removeChild(row2.firstChild);
+  }
+
+
+  var depensesList = depenses.Depenses;
+  var depenseHead = depensesList[0];
+  if(depenseHead){
+    for(colName in depenseHead){
+      var ch = col.cloneNode(true);
+      ch.innerHTML = colName;
+      row.appendChild(ch);
+    }
+
+    for(i in depensesList){
+      var r = row2.cloneNode(true);
+      var c = col2.cloneNode(true);
+      var dl=depensesList[i];
+      for(j in dl){
+	var dc = dl[j];
+	c = col2.cloneNode(true);
+	if(j=="Date"){
+	  var date = new Date(dc);
+	  var day = date.getDate();
+	  if(day < 10) 
+	    day="0"+day;
+	  c.innerHTML =  day; 
+	}else{
+	  c.innerHTML =  dc; 
+	}
+	r.appendChild(c);
       }
+      p2.appendChild(r);
     }
   }
-  xhr.send();
 }
 function getCookie(cname) {
   var name = cname + "=";
@@ -348,7 +375,6 @@ function checkCookie(name) {
   } else {
     return false
   }
-
 }
 function isAuth(){
   if(!checkCookie("uid")){	

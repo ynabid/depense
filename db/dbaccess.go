@@ -22,17 +22,55 @@ type Depense struct {
 	AccountId  int64
 }
 type DepenseV struct {
-	Id          int64
 	Date        int64
 	Description string
-	Montant     float64
-	UserId      int64
+	Account     string
 	Category    string
+	Montant     float64
 }
 
 type DepenseAccount map[string]float64
 type DepenseCategory map[string]DepenseAccount
 
+type Bilan struct {
+	Categories      []Category
+	Accounts        []Account
+	AccountsTR      map[string]map[string]float64
+	AccountsBilan   map[string]float64
+	DepenseCategory DepenseCategory
+	Depenses        []DepenseV
+}
+
+func DepenseData(from, to int64) (*Bilan, error) {
+	var b Bilan
+	var err error
+	b.Categories, err = ReadAll()
+	if err != nil {
+		return nil, err
+	}
+	b.Accounts, err = ReadAccounts()
+	if err != nil {
+		return nil, err
+	}
+	b.AccountsTR, err = ReadAccountsTR(from, to)
+	if err != nil {
+		return nil, err
+	}
+	b.AccountsBilan, err = ReadAccountsBilan(from, to)
+	if err != nil {
+		return nil, err
+	}
+	b.DepenseCategory, err = DepenseByCategory(from, to)
+	if err != nil {
+		return nil, err
+	}
+	b.Depenses, err = DepenseList(from, to)
+	if err != nil {
+		return nil, err
+	}
+	return &b, nil
+
+}
 func OpenMysqlDB() (*sql.DB, error) {
 	var err error
 	if db != nil {
@@ -85,7 +123,9 @@ func DepenseByCategory(from, to int64) (DepenseCategory, error) {
 			d[cat] = make(map[string]float64)
 		}
 		d[cat][acc] = amount
+		d[cat]["Total"] = d[cat]["Total"] + amount
 		d["Total"][acc] = d["Total"][acc] + amount
+		d["Total"]["Total"] = d["Total"]["Total"] + amount
 	}
 	rows.Close()
 	return d, nil
@@ -95,7 +135,18 @@ func DepenseList(from, to int64) ([]DepenseV, error) {
 	var depenseList []DepenseV
 	l := list.New()
 	rows, err := db.Query(
-		"SELECT depense.id,date,montant,description,user_id,name FROM depense LEFT JOIN category ON depense.category_id = category.id WHERE date >= ? and date <= ? ORDER BY date DESC, id DESC",
+		`SELECT 
+			date,
+			description,
+			account.name,
+			category.name, 
+			montant
+		FROM depense 
+			JOIN category 
+				ON depense.category_id = category.id 
+			JOIN account
+				ON depense.account_id = account.id
+		WHERE date >= ? and date <= ? ORDER BY date DESC, depense.id DESC`,
 		from,
 		to,
 	)
@@ -105,7 +156,7 @@ func DepenseList(from, to int64) ([]DepenseV, error) {
 
 	for rows.Next() {
 		var d DepenseV
-		rows.Scan(&d.Id, &d.Date, &d.Montant, &d.Description, &d.UserId, &d.Category)
+		rows.Scan(&d.Date, &d.Description, &d.Account, &d.Category, &d.Montant)
 		l.PushBack(d)
 	}
 	depenseList = make([]DepenseV, l.Len())
@@ -168,12 +219,9 @@ func ParseMonth(date string) (from, to int64, err error) {
 	return 0, 0, errors.New("Value of month is incorrect")
 }
 
-func DepenseMonth(m string) (float64, error) {
+func DepenseMonth(month string) (float64, error) {
 	var f float64
-	from, to, err := ParseMonth(m)
-	if err != nil {
-		return 0.0, err
-	}
+	from, to, err := ParseMonth(month)
 	rows, err := db.Query(
 		"SELECT sum(montant) FROM depense WHERE date >= ? and date <= ?",
 		from,

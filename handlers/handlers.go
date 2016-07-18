@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"github.com/ynabid/depense/db"
@@ -23,9 +24,18 @@ type DepenseString struct {
 	AccountId  int64
 }
 
+type gzipResponseWriter struct {
+	io.Writer
+	http.ResponseWriter
+}
+
+func (w gzipResponseWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
+
 var validPath = regexp.MustCompile("^/api/(depense|depenseList)/([a-zA-Z0-9]*)$")
 
-func DepenseMonthHandler(w http.ResponseWriter, r *http.Request, session *db.Session) {
+func DepenseMonthHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		r.ParseForm()
 		f, err := db.DepenseMonth(r.Form.Get("month"))
@@ -43,7 +53,58 @@ func DepenseMonthHandler(w http.ResponseWriter, r *http.Request, session *db.Ses
 		w.Write(b)
 	}
 }
-func DepenseHandler(w http.ResponseWriter, r *http.Request, session *db.Session) {
+func DepenseDataHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		r.ParseForm()
+		from, to, err := db.ParseMonth(r.Form.Get("month"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		all, err := db.DepenseData(from, to)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+
+		}
+		b, err := json.Marshal(all)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(b)
+
+	}
+}
+
+func AccountTRHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		r.ParseForm()
+		from, to, err := db.ParseMonth(r.Form.Get("month"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		accountsList, err := db.ReadAccountsTR(from, to)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+
+		}
+		b, err := json.Marshal(accountsList)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(b)
+
+	}
+}
+func DepenseHandler(w http.ResponseWriter, r *http.Request) {
 	data, _ := httputil.DumpRequest(r, true)
 	log.Println(string(data))
 	if r.Method == "POST" {
@@ -53,7 +114,16 @@ func DepenseHandler(w http.ResponseWriter, r *http.Request, session *db.Session)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			depense.UserId = session.UserId
+			depense.UserId, err = getUserId(r)
+			if err != nil {
+				http.Error(
+					w,
+					err.Error(),
+					http.StatusUnauthorized,
+				)
+				return
+			}
+
 			result, err := depense.Insert()
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -100,7 +170,7 @@ func DepenseHandler(w http.ResponseWriter, r *http.Request, session *db.Session)
 		w.Write(b)
 	}
 }
-func AccountListHandler(w http.ResponseWriter, r *http.Request, session *db.Session) {
+func AccountListHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		accountList, err := db.ReadAccounts()
 		if err != nil {
@@ -117,7 +187,7 @@ func AccountListHandler(w http.ResponseWriter, r *http.Request, session *db.Sess
 	}
 }
 
-func CategoryListHandler(w http.ResponseWriter, r *http.Request, session *db.Session) {
+func CategoryListHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		categoryList, err := db.ReadAll()
 		if err != nil {
@@ -133,7 +203,7 @@ func CategoryListHandler(w http.ResponseWriter, r *http.Request, session *db.Ses
 		}
 	}
 }
-func DepenseCatHandler(w http.ResponseWriter, r *http.Request, session *db.Session) {
+func DepenseCatHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		r.ParseForm()
 		from, to, err := db.ParseMonth(r.Form.Get("month"))
@@ -154,7 +224,7 @@ func DepenseCatHandler(w http.ResponseWriter, r *http.Request, session *db.Sessi
 		}
 	}
 }
-func DepenseListHandler(w http.ResponseWriter, r *http.Request, session *db.Session) {
+func DepenseListHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		r.ParseForm()
 		from, to, err := db.ParseMonth(r.Form.Get("month"))
@@ -209,15 +279,21 @@ func AuthHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
 }
-func MakeHandler(fn func(w http.ResponseWriter, r *http.Request, session *db.Session)) http.HandlerFunc {
+func getUserId(r *http.Request) (int64, error) {
+	uidC, err := r.Cookie("uid")
+	if err != nil {
+		return -1, err
+	}
+	userId, err := strconv.ParseInt(uidC.Value, 10, 64)
+	if err != nil {
+		return -1, err
+	}
+	return userId, nil
+}
+
+func MakeHandler(fn func(w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		/*		m := validPath.FindStringSubmatch(r.URL.Path)
-				if m == nil {
-					http.NotFound(w, r)
-					return
-				}
-		*/
-		uidC, err := r.Cookie("uid")
+		userId, err := getUserId(r)
 		if err != nil {
 			http.Error(
 				w,
@@ -225,7 +301,6 @@ func MakeHandler(fn func(w http.ResponseWriter, r *http.Request, session *db.Ses
 				http.StatusUnauthorized,
 			)
 			return
-
 		}
 		sidC, err := r.Cookie("sessionid")
 		if err != nil {
@@ -239,17 +314,7 @@ func MakeHandler(fn func(w http.ResponseWriter, r *http.Request, session *db.Ses
 		}
 
 		sid := sidC.Value
-		userId, err := strconv.ParseInt(uidC.Value, 10, 64)
-		if err != nil {
-			http.Error(
-				w,
-				err.Error(),
-				http.StatusInternalServerError,
-			)
-			return
-		}
-
-		session, err := db.IsAuthentified(userId, sid)
+		_, err = db.IsAuthentified(userId, sid)
 		if err != nil {
 			http.Error(
 				w,
@@ -258,8 +323,29 @@ func MakeHandler(fn func(w http.ResponseWriter, r *http.Request, session *db.Ses
 			)
 			return
 		}
-		fn(w, r, session)
+		CompresserFunc(fn, w, r)
 	}
+}
+
+func CompresserFunc(fn func(w http.ResponseWriter, r *http.Request), w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Encoding", "gzip")
+	gz := gzip.NewWriter(w)
+	defer gz.Close()
+	gzr := gzipResponseWriter{Writer: gz, ResponseWriter: w}
+	fn(gzr, r)
+}
+
+type CompresserHandler struct {
+	Handler http.Handler
+}
+
+func (ch *CompresserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	CompresserFunc(ch.Handler.ServeHTTP, w, r)
+}
+func CompresserHandlerFunc(handler http.Handler) http.Handler {
+	var ch CompresserHandler
+	ch.Handler = handler
+	return &ch
 }
 func parseDepense(body io.ReadCloser) (*db.Depense, error) {
 	var depense db.Depense

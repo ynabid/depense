@@ -42,12 +42,20 @@ func main() {
 		"/api/depense/bycategory",
 		handlers.MakeHandler(handlers.DepenseCatHandler),
 	)
+	http.HandleFunc(
+		"/api/depense/accountTR",
+		handlers.MakeHandler(handlers.AccountTRHandler),
+	)
+	http.HandleFunc(
+		"/api/depense/all",
+		handlers.MakeHandler(handlers.DepenseDataHandler),
+	)
 
 	http.Handle(
 		"/depense/",
 		http.StripPrefix(
 			"/depense/",
-			http.FileServer(http.Dir(dir+"res/")),
+			handlers.CompresserHandlerFunc(http.FileServer(http.Dir(dir+"res/"))),
 		),
 	)
 

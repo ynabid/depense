@@ -1,3 +1,10 @@
+
+.value{
+  width: 40px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis ;
+}
 .form{
   margin : auto;
 }
@@ -6,12 +13,9 @@
   display:block;
   width:100%
 }
-.form_line > label{
-  display : inline-block;	
-  width : 100px
-}
-.form_line > input {
-  width : 150px
+.container{
+  width : 100%;
+  display : block;
 }
 #login_bg{
   display : none;
